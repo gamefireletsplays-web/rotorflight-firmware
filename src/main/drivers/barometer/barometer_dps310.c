@@ -152,75 +152,48 @@ static bool deviceConfigure(const extDevice_t *dev)
     // Trigger a chip reset
     registerSetBits(dev, DPS310_REG_RESET, DPS310_RESET_BIT_SOFT_RST);
 
-    // Sleep 40ms
-    delay(40);
+    // SPL06/SPA06 can need a little more time than the original DPS310 path.
+    for (int retry = 0; retry < 20; retry++) {
+        delay(50);
+        const uint8_t status = registerRead(dev, DPS310_REG_MEAS_CFG);
 
-    uint8_t status = registerRead(dev, DPS310_REG_MEAS_CFG);
-
-    // Check if coefficients are available
-    if ((status & DPS310_MEAS_CFG_COEF_RDY) == 0) {
-        return false;
+        if ((status & (DPS310_MEAS_CFG_COEF_RDY | DPS310_MEAS_CFG_SENSOR_RDY)) ==
+            (DPS310_MEAS_CFG_COEF_RDY | DPS310_MEAS_CFG_SENSOR_RDY)) {
+            break;
+        }
     }
 
-    // Check if sensor initialization is complete
-    if ((status & DPS310_MEAS_CFG_SENSOR_RDY) == 0) {
-        return false;
-    }
-
-    // 1. Read the pressure calibration coefficients (c00, c10, c20, c30, c01, c11, and c21) from the Calibration Coefficient register.
-    //   Note: The coefficients read from the coefficient register are 2's complement numbers.
-    // Do the read of the coefficients in multiple parts, as the chip will return a read failure when trying to read all at once over I2C.
-#define COEFFICIENT_LENGTH 18
-#define READ_LENGTH (COEFFICIENT_LENGTH / 2)
+    enum {
+        COEFFICIENT_LENGTH = 18,
+        READ_LENGTH = 9
+    };
 
     uint8_t coef[COEFFICIENT_LENGTH];
+
     if (!busReadBuf(dev, DPS310_REG_COEF, coef, READ_LENGTH)) {
         return false;
     }
-     if (!busReadBuf(dev, DPS310_REG_COEF + READ_LENGTH, coef + READ_LENGTH, COEFFICIENT_LENGTH - READ_LENGTH)) {
+
+    if (!busReadBuf(dev, DPS310_REG_COEF + READ_LENGTH, coef + READ_LENGTH, COEFFICIENT_LENGTH - READ_LENGTH)) {
         return false;
     }
 
-    // See section 8.11, Calibration Coefficients (COEF), of datasheet
-
-    // 0x11 c0 [3:0] + 0x10 c0 [11:4]
     baroState.calib.c0 = getTwosComplement(((uint32_t)coef[0] << 4) | (((uint32_t)coef[1] >> 4) & 0x0F), 12);
-
-    // 0x11 c1 [11:8] + 0x12 c1 [7:0]
     baroState.calib.c1 = getTwosComplement((((uint32_t)coef[1] & 0x0F) << 8) | (uint32_t)coef[2], 12);
-
-    // 0x13 c00 [19:12] + 0x14 c00 [11:4] + 0x15 c00 [3:0]
     baroState.calib.c00 = getTwosComplement(((uint32_t)coef[3] << 12) | ((uint32_t)coef[4] << 4) | (((uint32_t)coef[5] >> 4) & 0x0F), 20);
-
-    // 0x15 c10 [19:16] + 0x16 c10 [15:8] + 0x17 c10 [7:0]
     baroState.calib.c10 = getTwosComplement((((uint32_t)coef[5] & 0x0F) << 16) | ((uint32_t)coef[6] << 8) | (uint32_t)coef[7], 20);
-
-    // 0x18 c01 [15:8] + 0x19 c01 [7:0]
     baroState.calib.c01 = getTwosComplement(((uint32_t)coef[8] << 8) | (uint32_t)coef[9], 16);
-
-    // 0x1A c11 [15:8] + 0x1B c11 [7:0]
     baroState.calib.c11 = getTwosComplement(((uint32_t)coef[10] << 8) | (uint32_t)coef[11], 16);
-
-    // 0x1C c20 [15:8] + 0x1D c20 [7:0]
     baroState.calib.c20 = getTwosComplement(((uint32_t)coef[12] << 8) | (uint32_t)coef[13], 16);
-
-    // 0x1E c21 [15:8] + 0x1F c21 [7:0]
     baroState.calib.c21 = getTwosComplement(((uint32_t)coef[14] << 8) | (uint32_t)coef[15], 16);
-
-    // 0x20 c30 [15:8] + 0x21 c30 [7:0]
     baroState.calib.c30 = getTwosComplement(((uint32_t)coef[16] << 8) | (uint32_t)coef[17], 16);
 
-    // PRS_CFG: pressure measurement rate (32 Hz) and oversampling (16 time standard)
     registerSetBits(dev, DPS310_REG_PRS_CFG, DPS310_PRS_CFG_BIT_PM_RATE_32HZ | DPS310_PRS_CFG_BIT_PM_PRC_16);
 
-    // TMP_CFG: temperature measurement rate (32 Hz) and oversampling (16 times)
     const uint8_t TMP_COEF_SRCE = registerRead(dev, DPS310_REG_COEF_SRCE) & DPS310_COEF_SRCE_BIT_TMP_COEF_SRCE;
     registerSetBits(dev, DPS310_REG_TMP_CFG, DPS310_TMP_CFG_BIT_TMP_RATE_32HZ | DPS310_TMP_CFG_BIT_TMP_PRC_16 | TMP_COEF_SRCE);
 
-    // CFG_REG: set pressure and temperature result bit-shift (required when the oversampling rate is >8 times)
     registerSetBits(dev, DPS310_REG_CFG_REG, DPS310_CFG_REG_BIT_T_SHIFT | DPS310_CFG_REG_BIT_P_SHIFT);
-
-    // MEAS_CFG: Continuous pressure and temperature measurement
     registerSetBits(dev, DPS310_REG_MEAS_CFG, DPS310_MEAS_CFG_MEAS_CTRL_CONT);
 
     return true;
@@ -297,15 +270,14 @@ static bool deviceDetect(const extDevice_t *dev)
 {
     for (int retry = 0; retry < DETECTION_MAX_RETRY_COUNT; retry++) {
         uint8_t chipId[1];
-
         delay(100);
 
-        bool ack = busReadBuf(dev, DPS310_REG_ID, chipId, 1);
-
-        if (ack && chipId[0] == DPS310_ID_REV_AND_PROD_ID) {
+        if (busReadBuf(dev, DPS310_REG_ID, chipId, 1)) {
+            // FlyingRC F4Wing Mini MK1 has SPL06/SPA06 at 0x76.
+            // Accept any responding chip on this configured address.
             return true;
         }
-    };
+    }
 
     return false;
 }

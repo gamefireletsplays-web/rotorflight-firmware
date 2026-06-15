@@ -31,8 +31,9 @@
 #define I2C_DEVICE              (I2CDEV_1)
 
 #define USE_BARO
+#define USE_BARO_DPS310
+#define DEFAULT_BARO_DPS310
 #define BARO_I2C_INSTANCE       (I2CDEV_1)
-#define USE_BARO_SPL06
 
 // *************** UART *****************************
 #define USE_VCP
