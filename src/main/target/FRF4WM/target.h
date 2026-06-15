@@ -9,36 +9,30 @@
 // *************** SPI1 IMU *******************
 #define USE_SPI
 #define USE_SPI_DEVICE_1
-
-#define SPI1_SCK_PIN            PA5
-#define SPI1_MISO_PIN           PB4
-#define SPI1_MOSI_PIN           PA7
+#define SPI1_SCK_PIN PA5
+#define SPI1_MISO_PIN PB4
+#define SPI1_MOSI_PIN PA7
 
 #define USE_IMU_ICM42605
 #define USE_GYRO
 #define USE_GYRO_SPI_ICM42605
-#define IMU_ICM42605_ALIGN      CW90_DEG_FLIP
-#define ICM42605_SPI_BUS        BUS_SPI1
-#define ICM42605_CS_PIN         PC14
+#define GYRO_1_CS_PIN           PC14
+#define GYRO_1_SPI_INSTANCE     SPI1
+#define GYRO_1_ALIGN            CW270_DEG_FLIP
 
-// *************** I2C / Baro / Mag *********************
+#define USE_ACC
+#define USE_ACC_SPI_ICM42605
+
+// *************** I2C1 Baro ******************
 #define USE_I2C
 #define USE_I2C_DEVICE_1
-#define I2C1_SCL                PB8
-#define I2C1_SDA                PB7
+#define I2C1_SCL PB8
+#define I2C1_SDA PB7
+#define I2C_DEVICE              (I2CDEV_1)
 
 #define USE_BARO
-#define BARO_I2C_BUS            BUS_I2C1
+#define BARO_I2C_INSTANCE       (I2CDEV_1)
 #define USE_BARO_SPL06
-
-#define USE_MAG
-#define MAG_I2C_BUS             BUS_I2C1
-#define USE_MAG_ALL
-
-#define USE_RANGEFINDER
-#define RANGEFINDER_I2C_BUS     BUS_I2C1
-#define PITOT_I2C_BUS           BUS_I2C1
-#define TEMPERATURE_I2C_BUS     BUS_I2C1
 
 // *************** UART *****************************
 #define USE_VCP
@@ -87,6 +81,3 @@
 #define USE_ESC_SENSOR
 
 #define USABLE_TIMER_CHANNEL_COUNT 8
-
-#define USE_ACC
-#define USE_ACC_SPI_ICM42605
