@@ -1,8 +1,6 @@
 #pragma once
 
-#define USE_TARGET_CONFIG
-
-#define TARGET_BOARD_IDENTIFIER "FRF4WM"
+#define TARGET_BOARD_IDENTIFIER "F4WM"
 #define USBD_PRODUCT_STRING  "FLYINGRCF4WINGMINI"
 
 #define LED0                    PA14  // Blue
@@ -17,6 +15,8 @@
 #define SPI1_MOSI_PIN           PA7
 
 #define USE_IMU_ICM42605
+#define USE_GYRO
+#define USE_GYRO_SPI_ICM42605
 #define IMU_ICM42605_ALIGN      CW90_DEG_FLIP
 #define ICM42605_SPI_BUS        BUS_SPI1
 #define ICM42605_CS_PIN         PC14
@@ -68,12 +68,11 @@
 // *************** ADC ***************************
 #define USE_ADC
 #define ADC_INSTANCE            ADC1
-#define ADC1_DMA_STREAM         DMA2_Stream4
 #define ADC_CHANNEL_1_PIN       PC4
 #define VBAT_ADC_CHANNEL        ADC_CHN_1
 
 // *************** Others ************************
-#define DEFAULT_FEATURES        (FEATURE_OSD | FEATURE_TELEMETRY | FEATURE_CURRENT_METER | FEATURE_VBAT | FEATURE_TX_PROF_SEL | FEATURE_BLACKBOX)
+#define DEFAULT_FEATURES        (FEATURE_OSD | FEATURE_TELEMETRY)
 #define VBAT_SCALE_DEFAULT      2100
 #define CURRENT_METER_SCALE     150
 
@@ -84,6 +83,10 @@
 
 #define MAX_PWM_OUTPUT_PORTS    7
 
-#define USE_SERIAL_4WAY_BLHELI_INTERFACE
 #define USE_DSHOT
 #define USE_ESC_SENSOR
+
+#define USABLE_TIMER_CHANNEL_COUNT 8
+
+#define USE_ACC
+#define USE_ACC_SPI_ICM42605

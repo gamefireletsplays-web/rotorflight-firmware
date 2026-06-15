@@ -1,1 +1,6 @@
 F405_TARGETS += $(TARGET)
+
+FEATURES += VCP
+
+TARGET_SRC += \
+    drivers/accgyro/accgyro_spi_icm426xx.c
